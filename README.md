@@ -46,10 +46,11 @@ static/                   Static images
 ## Requirements
 
 - Node.js 18+
-- Python 3.11 - 3.12
-- uv
-- Docker, if you want to run Neo4j with Docker Compose
-- An OpenAI-compatible LLM API key
+- Python 3.11 (required; `camel-oasis==0.2.5` does not install on Python 3.12)
+- GitHub Copilot CLI, authenticated with `copilot login`, for the local Copilot LLM adapter
+- Docker, for local Neo4j
+- uv is optional; the `setup:*:venv` scripts use Python's built-in venv instead
+- Optional: an external OpenAI-compatible LLM API key if you do not want to use Copilot
 
 ## Environment Configuration
 
@@ -59,18 +60,34 @@ Copy the example environment file:
 cp .env.example .env
 ```
 
-Minimal local configuration:
+Minimal local configuration using GitHub Copilot CLI as the LLM backend:
 
 ```env
-LLM_API_KEY=your_api_key_here
-LLM_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
-LLM_MODEL_NAME=qwen-plus
+LLM_PROVIDER=copilot
+LLM_BASE_URL=http://127.0.0.1:8787/v1
+LLM_MODEL_NAME=gpt-5.5
+COPILOT_MODEL=gpt-5.5
 
 GRAPH_BACKEND=neo4j
 NEO4J_URI=bolt://localhost:7687
 NEO4J_USERNAME=neo4j
 NEO4J_PASSWORD=password
 NEO4J_DATABASE=neo4j
+```
+
+There is also a ready-to-copy file:
+
+```bash
+cp .env.copilot.example .env
+```
+
+For an external OpenAI-compatible provider instead, set:
+
+```env
+LLM_PROVIDER=openai-compatible
+LLM_API_KEY=your_api_key_here
+LLM_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+LLM_MODEL_NAME=qwen-plus
 ```
 
 Optional LLM rate-limit settings:
@@ -103,14 +120,14 @@ Make sure the password matches `NEO4J_PASSWORD` in `.env`.
 Install frontend and backend dependencies:
 
 ```bash
-npm run setup:all
+npm run setup:all:venv
 ```
 
 Or install them separately:
 
 ```bash
 npm run setup
-npm run setup:backend
+npm run setup:backend:venv
 ```
 
 ## Run the Project
@@ -118,18 +135,20 @@ npm run setup:backend
 Run frontend and backend together:
 
 ```bash
-npm run dev
+npm run dev:copilot
 ```
 
 Service URLs:
 
 - Frontend: `http://localhost:3000`
-- Backend API: `http://localhost:5001`
+- Backend API: `http://localhost:5002` when using `.env.copilot.example`
+- Copilot OpenAI adapter: `http://localhost:8787/v1`
 
 Run services separately:
 
 ```bash
-npm run backend
+npm run copilot-adapter
+npm run backend:venv
 npm run frontend
 ```
 

@@ -5,6 +5,7 @@
 
 import os
 from dotenv import load_dotenv
+from copilot_env import apply_copilot_llm_defaults
 
 # 加载项目根目录的 .env 文件
 # 路径: MiroFish/.env (相对于 backend/app/config.py)
@@ -15,6 +16,8 @@ if os.path.exists(project_root_env):
 else:
     # 如果根目录没有 .env，尝试加载环境变量（用于生产环境）
     load_dotenv(override=True)
+
+apply_copilot_llm_defaults()
 
 
 class Config:
@@ -28,6 +31,7 @@ class Config:
     JSON_AS_ASCII = False
     
     # LLM配置（统一使用OpenAI格式）
+    LLM_PROVIDER = os.environ.get('LLM_PROVIDER', 'openai-compatible').lower()
     LLM_API_KEY = os.environ.get('LLM_API_KEY')
     LLM_BASE_URL = os.environ.get('LLM_BASE_URL', 'https://api.openai.com/v1')
     LLM_MODEL_NAME = os.environ.get('LLM_MODEL_NAME', 'gpt-4o-mini')
@@ -88,4 +92,3 @@ class Config:
         if cls.GRAPH_BACKEND == 'neo4j' and not cls.NEO4J_PASSWORD:
             errors.append("NEO4J_PASSWORD 未配置")
         return errors
-

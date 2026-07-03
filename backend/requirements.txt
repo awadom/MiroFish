@@ -1,7 +1,7 @@
 # ===========================================
 # MiroFish Backend Dependencies
 # ===========================================
-# Python 3.11+ required
+# Python 3.11 required (camel-oasis 0.2.5 does not publish Python 3.12 wheels)
 # Install: pip install -r requirements.txt
 # ===========================================
 

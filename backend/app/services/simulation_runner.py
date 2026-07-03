@@ -413,8 +413,9 @@ class SimulationRunner:
             #   reddit/actions.jsonl  - Reddit 动作日志
             #   simulation.log        - 主进程日志
             
+            python_executable = os.environ.get("MIROFISH_SIMULATION_PYTHON") or sys.executable
             cmd = [
-                "D:\\conda\\python.exe",  # 使用包含 camel-ai 的 Python
+                python_executable,
                 script_path,
                 "--config", config_path,  # 使用完整配置文件路径
             ]
@@ -433,12 +434,14 @@ class SimulationRunner:
             env['PYTHONUTF8'] = '1'  # Python 3.7+ 支持，让所有 open() 默认使用 UTF-8
             env['PYTHONIOENCODING'] = 'utf-8'  # 确保 stdout/stderr 使用 UTF-8
 
-            # 确保使用 conda Python，优先搜索其路径
+            # Windows users can still opt into a conda interpreter via
+            # MIROFISH_SIMULATION_PYTHON; POSIX local runs use the active venv.
             conda_python_dir = r"D:\conda"
-            if 'PATH' in env:
-                env['PATH'] = conda_python_dir + os.pathsep + env['PATH']
-            else:
-                env['PATH'] = conda_python_dir
+            if IS_WINDOWS and os.path.exists(conda_python_dir):
+                if 'PATH' in env:
+                    env['PATH'] = conda_python_dir + os.pathsep + env['PATH']
+                else:
+                    env['PATH'] = conda_python_dir
             
             # 设置工作目录为模拟目录（数据库等文件会生成在此）
             # 使用 start_new_session=True 创建新的进程组，确保可以通过 os.killpg 终止所有子进程
@@ -1772,4 +1775,3 @@ class SimulationRunner:
             results = results[:limit]
         
         return results
-

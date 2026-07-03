@@ -48,10 +48,11 @@ static/                   静态图片资源
 ## 环境要求
 
 - Node.js 18+
-- Python 3.11 - 3.12
-- uv
-- Docker（用于快速启动 Neo4j）
-- 一个兼容 OpenAI SDK 格式的 LLM API Key
+- Python 3.11（必需；`camel-oasis==0.2.5` 不支持 Python 3.12 安装）
+- 已登录的 GitHub Copilot CLI（`copilot login`），用于本地 Copilot LLM 适配器
+- Docker（用于本地 Neo4j）
+- uv 可选；`setup:*:venv` 脚本使用 Python 内置 venv
+- 可选：如果不使用 Copilot，可配置外部 OpenAI-compatible LLM API Key
 
 ## 环境变量配置
 
@@ -61,18 +62,34 @@ static/                   静态图片资源
 cp .env.example .env
 ```
 
-最小本地配置示例：
+使用 GitHub Copilot CLI 作为 LLM 后端的最小本地配置：
 
 ```env
-LLM_API_KEY=your_api_key_here
-LLM_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
-LLM_MODEL_NAME=qwen-plus
+LLM_PROVIDER=copilot
+LLM_BASE_URL=http://127.0.0.1:8787/v1
+LLM_MODEL_NAME=gpt-5.5
+COPILOT_MODEL=gpt-5.5
 
 GRAPH_BACKEND=neo4j
 NEO4J_URI=bolt://localhost:7687
 NEO4J_USERNAME=neo4j
 NEO4J_PASSWORD=password
 NEO4J_DATABASE=neo4j
+```
+
+也可以直接复制本地 Copilot 示例：
+
+```bash
+cp .env.copilot.example .env
+```
+
+如果要使用外部 OpenAI-compatible 服务，则设置：
+
+```env
+LLM_PROVIDER=openai-compatible
+LLM_API_KEY=your_api_key_here
+LLM_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+LLM_MODEL_NAME=qwen-plus
 ```
 
 可选的 LLM 限流重试配置：
@@ -105,14 +122,14 @@ docker compose -f docker-compose.neo4j.yml up -d
 一次性安装前后端依赖：
 
 ```bash
-npm run setup:all
+npm run setup:all:venv
 ```
 
 也可以分开安装：
 
 ```bash
 npm run setup
-npm run setup:backend
+npm run setup:backend:venv
 ```
 
 ## 运行项目
@@ -120,18 +137,20 @@ npm run setup:backend
 同时启动前端和后端：
 
 ```bash
-npm run dev
+npm run dev:copilot
 ```
 
 服务地址：
 
 - 前端：`http://localhost:3000`
-- 后端 API：`http://localhost:5001`
+- 使用 `.env.copilot.example` 时后端 API：`http://localhost:5002`
+- Copilot OpenAI 适配器：`http://localhost:8787/v1`
 
 单独启动：
 
 ```bash
-npm run backend
+npm run copilot-adapter
+npm run backend:venv
 npm run frontend
 ```
 

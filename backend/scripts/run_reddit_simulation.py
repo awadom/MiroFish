@@ -46,6 +46,9 @@ else:
     if os.path.exists(_backend_env):
         load_dotenv(_backend_env)
 
+from copilot_env import apply_copilot_llm_defaults
+apply_copilot_llm_defaults()
+
 
 import re
 
@@ -766,4 +769,3 @@ if __name__ == "__main__":
         pass
     finally:
         print("模拟进程已退出")
-
