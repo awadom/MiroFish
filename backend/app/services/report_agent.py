@@ -27,6 +27,7 @@ from .football_probability import (
     FootballProbabilitySimulator,
     football_prediction_to_markdown,
 )
+from .simulation_runner import SimulationRunner
 
 # 根据后端选择合适的工具类型
 if Config.GRAPH_BACKEND == 'neo4j':
@@ -979,8 +980,21 @@ class ReportAgent:
 
     def _get_computed_prediction_context(self) -> str:
         """Return compact JSON context for deterministic prediction results."""
+        action_context = self._get_simulation_action_log_context()
         if not self.computed_prediction:
-            return "（无结构化预测结果）"
+            return json.dumps(
+                {
+                    "kind": "simulation_context",
+                    "direct_simulation_action_log": action_context,
+                    "reporting_instruction": (
+                        "Use direct_simulation_action_log as primary evidence of "
+                        "what agents actually did. Do not describe the run as zero "
+                        "activity when total_actions is greater than zero."
+                    ),
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
         compact = {
             "kind": self.computed_prediction.get("kind"),
             "method": self.computed_prediction.get("method"),
@@ -988,7 +1002,74 @@ class ReportAgent:
             "result": self.computed_prediction.get("result"),
             "warnings": self.computed_prediction.get("warnings", []),
         }
-        return json.dumps(compact, ensure_ascii=False, indent=2)
+        return json.dumps(
+            {
+                "computed_prediction": compact,
+                "direct_simulation_action_log": action_context,
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+
+    def _get_simulation_action_log_context(self) -> Dict[str, Any]:
+        """Summarize OASIS action logs so reports include actual agent behavior."""
+        try:
+            actions = SimulationRunner.get_actions(self.simulation_id, limit=10000)
+            timeline = SimulationRunner.get_timeline(self.simulation_id)
+            agent_stats = SimulationRunner.get_agent_stats(self.simulation_id)
+        except Exception as exc:
+            logger.warning(f"Failed to read simulation action logs: {exc}")
+            return {
+                "status": "unavailable",
+                "error": str(exc),
+                "total_actions": 0,
+            }
+
+        platform_counts: Dict[str, int] = {}
+        action_type_counts: Dict[str, int] = {}
+        for action in actions:
+            platform_counts[action.platform] = platform_counts.get(action.platform, 0) + 1
+            action_type_counts[action.action_type] = action_type_counts.get(action.action_type, 0) + 1
+
+        chronological = sorted(actions, key=lambda item: item.timestamp)
+        sample_actions = chronological[:20]
+        if len(chronological) > 40:
+            sample_actions = chronological[:20] + chronological[-20:]
+        elif len(chronological) > 20:
+            sample_actions = chronological
+
+        def compact_action(action) -> Dict[str, Any]:
+            args = action.action_args or {}
+            content = args.get("content")
+            if content is None:
+                content = json.dumps(args, ensure_ascii=False)
+            content = str(content)
+            if len(content) > 500:
+                content = content[:500] + "..."
+            return {
+                "round": action.round_num,
+                "platform": action.platform,
+                "agent_id": action.agent_id,
+                "agent_name": action.agent_name,
+                "action_type": action.action_type,
+                "content": content,
+                "success": action.success,
+                "timestamp": action.timestamp,
+            }
+
+        return {
+            "status": "available",
+            "total_actions": len(actions),
+            "platform_counts": platform_counts,
+            "action_type_counts": action_type_counts,
+            "rounds": timeline,
+            "agent_stats": agent_stats,
+            "sample_actions": [compact_action(action) for action in sample_actions],
+            "sample_note": (
+                "sample_actions are chronological and capped for prompt size; "
+                "total_actions and stats cover the full action log."
+            ),
+        }
 
     def _is_computed_prediction_section(self, section: ReportSection, section_index: int) -> bool:
         if not self.computed_prediction:
